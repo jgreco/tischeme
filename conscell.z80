@@ -1,0 +1,83 @@
+; cons cell layout:
+;
+; struct {
+;	byte flags[2];
+;	union {
+;		struct {
+;			byte car[3];
+;			byte cdr[3];
+;		}
+;		byte ivalue[6];
+;	}
+; }
+
+
+
+cons_size	.EQU 8
+cons_flags1	.EQU 0
+cons_flags2	.EQU 1
+
+cons_car	.EQU 2
+cons_cdr	.EQU 5
+
+cons_ivalue	.EQU 2
+
+#define type1(foo)	(foo+cons_flags1)
+#define type2(foo)	(foo+cons_flags2)
+
+#define car(foo)	(foo+cons_car)
+#define cdr(foo)	(foo+cons_cdr)
+#define ivalue(foo)	(foo+cons_ivalue)
+
+;flags (bank 1)
+#define T_STRING        00000001b
+#define T_NUMBER        00000010b
+#define T_SYMBOL        00000100b
+#define T_CHAR          00001000b
+#define T_SYNTAX        00010000b
+#define T_PROC          00100000b
+#define T_PAIR          01000000b
+#define T_CLOSURE       10000000b
+
+;flags (bank 2)
+#define T_CONTINUATION  00000001b
+#define T_MACRO         00000010b
+#define T_LIST          00000100b
+#define T_ARGLST        00001000b
+#define T_LLIST         00010000b
+#define T_ATOM          00100000b
+#define CLRATOM         01000000b ; TODO
+#define MARK            10000000b
+#define UNMARK          00000000b ; TODO
+
+
+
+;; allocate a new cons cell
+;
+; output
+; 	hl - address to new cons cell
+alloc_cons:
+	; TODO
+	ret
+
+;; create a new cons cell
+;
+; input
+;	hl - car
+;	de - cdr
+; output
+;	hl - new cons cell
+cons:
+	push hl
+	call alloc_cons
+
+	ld cdr(hl),de
+	pop de
+	ld car(hl),de
+
+	; set type to T_PAIR
+	ld type0(hl),T_PAIR
+	ld type1(hl),0
+
+
+	ret

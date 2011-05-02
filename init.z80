@@ -1,0 +1,445 @@
+#include "globals.z80"
+#include "conscell.z80"
+
+init_scheme:
+	call init_globals
+	ret
+
+init_globals:
+	call init_vars_global
+	call init_syntax
+	call init_procs
+	; more stuff
+	ret
+
+
+init_vars_global:
+	; set up IO vars (not needed?)
+
+	; create NIL, T, F
+	call alloc_cons
+	ld (NIL),hl
+		ld car(NIL),hl ; set car of NIL to NIL
+		ld cdr(NIL),hl ; set cdr of NIL to NIL
+
+		; set flags to T_ATOM and MARK
+		ld A,T_ATOM
+		or MARK
+		ld type1(NILL),0
+		ld type2(NIL),A
+
+	call alloc_cons
+	ld (_T),hl
+		ld car(_T),hl ; set car of _T to _T
+		ld cdr(_T),hl ; set cdr of _T to _T
+
+		; set flags to T_ATOM and MARK
+		ld A,T_ATOM
+		or MARK
+		ld type1(_T),0
+		ld type2(_T),A
+
+	call alloc_cons
+	ld (_F),hl
+		ld car(_F),hl ; set car of _F to _F
+		ld cdr(_F),hl ; set cdr of _F to _F
+
+		; set flags to T_ATOM and MARK
+		ld A,T_ATOM
+		or MARK
+		ld type1(_F),0
+		ld type2(_F),A
+
+	call alloc_cons
+	ld (global_env),hl
+		ld hl,NIL
+		ld car(global_env),hl ; set car of global_env to NIL
+		ld cdr(global_env),hl ; set cdr of global_env to NIL
+	
+	; mk_symbol("else")
+	; dump said symbol onto the global_env with value _T
+
+	; start the oblist with nil
+	ld (oblist), hl
+
+	ret
+
+init_syntax:
+	ld hl, sAND
+	ld de, OP_ADD0
+	call mk_syntax
+
+	ld hl, sBEGIN
+	ld de, OP_BEGIN
+	call mk_syntax
+
+	ld hl, sCASE
+	ld de, OP_CASE0
+	call mk_syntax
+
+	ld hl, sCOND
+	ld de, OP_COND0
+	call mk_syntax
+
+	ld hl, sDEFINE
+	ld de, OP_DEF0
+	call mk_syntax
+
+	ld hl, sIF
+	ld de, OP_IF0
+	call mk_syntax
+
+	ld hl, sLAMBDA
+	ld de, OP_LAMBDA
+	call mk_syntax
+
+	ld hl, sLET
+	ld de, OP_LET0
+	call mk_syntax
+
+	ld hl, sLETAST
+	ld de, OP_LET0AST
+	call mk_syntax
+
+	ld hl, sLETREC
+	ld de, OP_LET0REC
+	call mk_syntax
+
+	ld hl, sMACRO
+	ld de, OP_0MACRO
+	call mk_syntax
+
+	ld hl, sOR
+	ld de, OP_OR0
+	call mk_syntax
+
+	ld hl, sQUOTE
+	ld de, OP_QUOTE
+	call mk_syntax
+
+	ld hl, sSET1
+	ld de, OP_SET1
+	call mk_syntax
+
+	ret
+
+init_procs:
+	ld hl, sMUL
+	ld de, OP_MUL 
+	call mk_proc
+
+	ld hl, sADD
+	ld de, OP_ADD 
+	call mk_proc
+
+	ld hl, sSUB
+	ld de, OP_SUB 
+	call mk_proc
+
+	ld hl, sGEQ
+	ld de, OP_GEQ 
+	call mk_proc
+
+	ld hl, sGRE
+	ld de, OP_GRE 
+	call mk_proc
+
+	ld hl, sNEQ
+	ld de, OP_NEQ 
+	call mk_proc
+
+	ld hl, sLEQ
+	ld de, OP_LEQ 
+	call mk_proc
+
+	ld hl, sLESS
+	ld de, OP_LESS 
+	call mk_proc
+
+	ld hl, sAPPEND
+	ld de, OP_APPEND 
+	call mk_proc
+
+	ld hl, sPAPPLY
+	ld de, OP_PAPPLY 
+	call mk_proc
+
+	ld hl, sBOOL
+	ld de, OP_BOOL 
+	call mk_proc
+
+	ld hl, sCALLCC
+	ld de, OP_CALLCC 
+	call mk_proc
+
+	ld hl, sCAR
+	ld de, OP_CAR 
+	call mk_proc
+
+	ld hl, sCDR
+	ld de, OP_CDR 
+	call mk_proc
+
+	ld hl, sCHRINT
+	ld de, OP_CHRINT 
+	call mk_proc
+
+	ld hl, sCHRDNC
+	ld de, OP_CHRDNC 
+	call mk_proc
+
+	ld hl, sCHRUPC
+	ld de, OP_CHRUPC 
+	call mk_proc
+
+	ld hl, sCHRLT
+	ld de, OP_CHRLT 
+	call mk_proc
+
+	ld hl, sCHRLE
+	ld de, OP_CHRLE 
+	call mk_proc
+
+	ld hl, sCHREQ
+	ld de, OP_CHREQ 
+	call mk_proc
+
+	ld hl, sCHRGT
+	ld de, OP_CHRGT 
+	call mk_proc
+
+	ld hl, sCHRGE
+	ld de, OP_CHRGE 
+	call mk_proc
+
+	ld hl, sCHAR
+	ld de, OP_CHAR 
+	call mk_proc
+
+	ld hl, sCONS
+	ld de, OP_CONS 
+	call mk_proc
+
+	ld hl, sDISPLAY
+	ld de, OP_DISPLAY 
+	call mk_proc
+
+	ld hl, sEOFOBJ
+	ld de, OP_EOFOBJ 
+	call mk_proc
+
+	ld hl, sEQ
+	ld de, OP_EQ 
+	call mk_proc
+
+	ld hl, sEQV
+	ld de, OP_EQV 
+	call mk_proc
+
+	ld hl, sERROR
+	ld de, OP_ERROR 
+	call mk_proc
+
+	ld hl, sPEVAL
+	ld de, OP_PEVAL 
+	call mk_proc
+
+	ld hl, sEXP0MAC
+	ld de, OP_EXP0MAC 
+	call mk_proc
+
+	ld hl, sGENSYM
+	ld de, OP_GENSYM 
+	call mk_proc
+
+	ld hl, sINTCHR
+	ld de, OP_INTCHR 
+	call mk_proc
+
+	ld hl, sLENGTH
+	ld de, OP_LENGTH 
+	call mk_proc
+
+	ld hl, sLSTSTR
+	ld de, OP_LSTSTR 
+	call mk_proc
+
+	ld hl, sLOAD
+	ld de, OP_LOAD 
+	call mk_proc
+
+	ld hl, sMKSTR
+	ld de, OP_MKSTR 
+	call mk_proc
+
+	ld hl, sNEGP
+	ld de, OP_NEGP 
+	call mk_proc
+
+	ld hl, sNEWLINE
+	ld de, OP_NEWLINE 
+	call mk_proc
+
+	ld hl, sNOT
+	ld de, OP_NOT 
+	call mk_proc
+
+	ld hl, sNULL
+	ld de, OP_NULL 
+	call mk_proc
+
+	ld hl, sNUMBER
+	ld de, OP_NUMBER 
+	call mk_proc
+
+	ld hl, sPAIR
+	ld de, OP_PAIR 
+	call mk_proc
+
+	ld hl, sPKCHR
+	ld de, OP_PKCHR 
+	call mk_proc
+
+	ld hl, sPOSP
+	ld de, OP_POSP 
+	call mk_proc
+
+	ld hl, sPROC
+	ld de, OP_PROC 
+	call mk_proc
+
+	ld hl, sDIV
+	ld de, OP_DIV 
+	call mk_proc
+
+	ld hl, sREAD
+	ld de, OP_READ 
+	call mk_proc
+
+	ld hl, sRDCHR
+	ld de, OP_RDCHR 
+	call mk_proc
+
+	ld hl, sREM
+	ld de, OP_REM 
+	call mk_proc
+
+	ld hl, sREVERSE
+	ld de, OP_REVERSE 
+	call mk_proc
+
+	ld hl, sSETCAR
+	ld de, OP_SETCAR 
+	call mk_proc
+
+	ld hl, sSETCDR
+	ld de, OP_SETCDR 
+	call mk_proc
+
+	ld hl, sSTRLST
+	ld de, OP_STRLST 
+	call mk_proc
+
+	ld hl, sSTRSYM
+	ld de, OP_STRSYM 
+	call mk_proc
+
+	ld hl, sSTRAPND
+	ld de, OP_STRAPND 
+	call mk_proc
+
+	ld hl, sSTRCPY
+	ld de, OP_STRCPY 
+	call mk_proc
+
+	ld hl, sSTRFIL
+	ld de, OP_STRFIL 
+	call mk_proc
+
+	ld hl, sSTRLEN
+	ld de, OP_STRLEN 
+	call mk_proc
+
+	ld hl, sSTRREF
+	ld de, OP_STRREF 
+	call mk_proc
+
+	ld hl, sSTRSET
+	ld de, OP_STRSET 
+	call mk_proc
+
+	ld hl, sSTRLT
+	ld de, OP_STRLT 
+	call mk_proc
+
+	ld hl, sSTREQ
+	ld de, OP_STREQ 
+	call mk_proc
+
+	ld hl, sSTRING
+	ld de, OP_STRING 
+	call mk_proc
+
+	ld hl, sSUBSTR
+	ld de, OP_SUBSTR 
+	call mk_proc
+
+	ld hl, sSYMSTR
+	ld de, OP_SYMSTR 
+	call mk_proc
+
+	ld hl, sSYMBOL
+	ld de, OP_SYMBOL 
+	call mk_proc
+
+	ld hl, sW0INFILE
+	ld de, OP_W0INFILE 
+	call mk_proc
+
+	ld hl, sW0OUTFILE
+	ld de, OP_W0OUTFILE 
+	call mk_proc
+
+	ld hl, sWRITE
+	ld de, OP_WRITE 
+	call mk_proc
+
+	ld hl, sWRCHR
+	ld de, OP_WRCHR 
+	call mk_proc
+
+	ld hl, sZEROP
+	ld de, OP_ZEROP 
+	call mk_proc
+
+	ret
+
+; input
+;	hl - string value
+;	de - operation
+; output
+;
+; destroys
+;	a
+;	de
+;	hl
+mk_syntax:
+	;;;NOTE: loading operation into cdr, because I don't see any reason not to
+
+	; TODO make scheme string, load into hl
+
+	call cons
+
+	; set type of new cell to T_SYNTAX and T_SYMBOL
+	ld a,T_SYNTAX
+	or T_SYMBOL
+	ld type0(hl),a
+
+	; oblist = cons(x, oblist)
+	push hl
+		ld de,oblist
+		call cons ; (cons hl de) ; (cons new-syntax oblist)
+		ld (oblist),hl
+	pop hl
+
+	ret
