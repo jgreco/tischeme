@@ -1,0 +1,61 @@
+; input
+;	hl - string value
+; output
+;	hl - symbol cons pointer
+; destroys
+;	de
+mk_symbol:
+	;pointer	x;
+
+	;if ((x = findsym(name)) != NIL)
+	push hl
+		call findsym
+		ld de,NIL
+
+		;;; macro this up, with the ideal solution
+		; if(h != d) jump ld a,d cp h jp NZ,skip ; if(l != e) jump ld a,e cp l jp NZ,skip ; else
+		scf
+		ccf
+		sbc hl,de
+
+		jp NZ,skip
+
+	;return x;
+	pop hl ; fix the stack
+	ld hl,NIL ; return NIL
+	ret
+
+	skip:
+	pop hl
+
+			
+
+	;x = cons(mk_string(name), NIL);
+	;;;hl=mk_string(hl)
+	ld de,NIL
+	call cons
+
+	;type(x) = T_SYMBOL;
+	ld type1(hl),T_SYMBOL
+	ld type2(hl),0
+
+	;oblist = cons(x, oblist);
+	ld de,oblist
+	call cons
+	ld (oblist),hl
+
+	;return x;
+	ret
+
+; input
+;	hl - string value
+; output
+;	hl - symbol cons pointer
+; destroys
+findsym:
+	;;; pointer x;
+
+	;;;for (x = oblist; x != NIL; x = cdr(x))
+		;;;if (!strcmp(name, symname(car(x))))
+			;;;return car(x);
+	;;;return NIL;

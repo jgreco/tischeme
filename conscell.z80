@@ -18,16 +18,14 @@ cons_flags1	.EQU 0
 cons_flags2	.EQU 1
 
 cons_car	.EQU 2
+cons_car2	.EQU 3
+cons_carpage	.EQU 4
 cons_cdr	.EQU 5
+cons_cdr2	.EQU 6
+cons_cdrpage	.EQU 6
 
 cons_ivalue	.EQU 2
 
-#define type1(foo)	(foo+cons_flags1)
-#define type2(foo)	(foo+cons_flags2)
-
-#define car(foo)	(foo+cons_car)
-#define cdr(foo)	(foo+cons_cdr)
-#define ivalue(foo)	(foo+cons_ivalue)
 
 ;flags (bank 1)
 #define T_STRING        00000001b
@@ -55,29 +53,123 @@ cons_ivalue	.EQU 2
 ;; allocate a new cons cell
 ;
 ; output
-; 	hl - address to new cons cell
+; 	ix - address to new cons cell
+; other
+;	possible generates a page fault
+;	possible generates a garbage collect
 alloc_cons:
 	; TODO
 	ret
 
+
 ;; create a new cons cell
 ;
 ; input
-;	hl - car
-;	de - cdr
+;	two cons addresses on stack (SP)
 ; output
-;	hl - new cons cell
-cons:
-	push hl
-	call alloc_cons
+;	new cons address on stack (SP)
+; destroys
+;	de,ix
+; other
+;	possible generates a page fault
+;	possible generates a garbage collect
 
-	ld cdr(hl),de
+#macro cons
+	;;;alloc, possible pagefault
+	; page checks not needed in this macro, ix will always refer to
+	;  the current page by definition
+
+	;;;set flags 1
+	ld (ix+cons_flags1),;;;T_PAIR
+	;;;set flags 2
+	ld (ix+cons_flags2),;;;T_0
+
+	;pop car
+		pop de ; page
+		ld (ix+cons_carpage),d
+		
+		pop de ; address
+		ld (ix+cons_car),d
+		ld (ix+cons_car2),e
+
+	;pop cdr
+		pop de ; page
+		ld (ix+cons_carpage),d
+
+		pop de ; address
+		ld (ix+cons_car),d
+		ld (ix+cons_car2),e
+
+	;push new and page
+	push ix ; address
+	;; load d with current page, e undefined
+	push de ; current page
+#endmacro
+
+;; car
+;
+; input
+;	a single cons address on stack (SP)
+; output
+;	cons address of car of input on stack (SP)
+; destroys
+;	ix
+; other
+;	possible generates a page fault
+#macro car
+	pop de ; page
+	;;;page_fault  pagefault here if de != current page
+
+	pop ix ; address
+
+	; push the car
+	ld d,(ix+cons_car)
+	ld e,(ix+cons_car2)
+	push de
+	; push the page
+	ld d,(ix+cons_carpage)
+	push de
+#endmacro
+
+;; cdr
+;
+; input
+;	a single cons address on stack (SP)
+; output
+;	cons address of cdr of input on stack (SP)
+; destroys
+;	ix
+; other
+;	possible generates a page fault
+#macro cdr
+	pop de ; page
+	;;;page_fault  pagefault here if de != current page
+
+	pop ix ; address
+
+	; push the car
+	ld d,(ix+cons_cdr)
+	ld e,(ix+cons_cdr2)
+	push de
+	; push the page
+	ld d,(ix+cons_cdrpage)
+	push de
+#endmacro
+
+;; flags_set
+;
+; input
+;	cons address on stack (SP)
+;	hl - flags
+; output
+; destroys
+;	de,ix
+; other
+#macro flags_set
 	pop de
-	ld car(hl),de
-
-	; set type to T_PAIR
-	ld type0(hl),T_PAIR
-	ld type1(hl),0
-
-
-	ret
+	pop ix
+	ld (ix+cons_flags1),h
+	ld (ix+cons_flags1),l
+	push ix
+	push de
+#endmacro

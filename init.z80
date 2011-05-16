@@ -16,51 +16,81 @@ init_globals:
 init_vars_global:
 	; set up IO vars (not needed?)
 
-	; create NIL, T, F
-	call alloc_cons
-	ld (NIL),hl
-		ld car(NIL),hl ; set car of NIL to NIL
-		ld cdr(NIL),hl ; set cdr of NIL to NIL
-
-		; set flags to T_ATOM and MARK
-		ld A,T_ATOM
-		or MARK
-		ld type1(NILL),0
-		ld type2(NIL),A
-
-	call alloc_cons
-	ld (_T),hl
-		ld car(_T),hl ; set car of _T to _T
-		ld cdr(_T),hl ; set cdr of _T to _T
-
-		; set flags to T_ATOM and MARK
-		ld A,T_ATOM
-		or MARK
-		ld type1(_T),0
-		ld type2(_T),A
-
-	call alloc_cons
-	ld (_F),hl
-		ld car(_F),hl ; set car of _F to _F
-		ld cdr(_F),hl ; set cdr of _F to _F
-
-		; set flags to T_ATOM and MARK
-		ld A,T_ATOM
-		or MARK
-		ld type1(_F),0
-		ld type2(_F),A
-
-	call alloc_cons
-	ld (global_env),hl
+	; init NIL
+		ld ix,NIL
 		ld hl,NIL
-		ld car(global_env),hl ; set car of global_env to NIL
-		ld cdr(global_env),hl ; set cdr of global_env to NIL
+		ld (ix+cons_car),h ; set car of NIL to NIL
+		ld (ix+cons_car2),l
+		ld (ix+cons_cdr),h ; set cdr of NIL to NIL
+		ld (ix+cons_cdr2),l
+		ld hl,0
+		ld (ix+cons_cdrpage),l
+		ld (ix+cons_carpage),l
+
+		; set flags to T_ATOM and MARK
+		xor a
+		ld (ix+cons_flags1),a
+		ld a,T_ATOM
+		or MARK
+		ld (ix+cons_flags1),a
+
+	;init _T
+		ld ix,_T
+		ld hl,_T
+		ld (ix+cons_car),h ; set car of NIL to NIL
+		ld (ix+cons_car2),l
+		ld (ix+cons_cdr),h ; set cdr of NIL to NIL
+		ld (ix+cons_cdr2),l
+		ld hl,0
+		ld (ix+cons_cdrpage),l
+		ld (ix+cons_carpage),l
+
+		; set flags to T_ATOM and MARK
+		xor a
+		ld (ix+cons_flags1),a
+		ld a,T_ATOM
+		or MARK
+		ld (ix+cons_flags1),a
+
+	;init _F
+		ld ix,_F
+		ld hl,_F
+		ld (ix+cons_car),h ; set car of NIL to NIL
+		ld (ix+cons_car2),l
+		ld (ix+cons_cdr),h ; set cdr of NIL to NIL
+		ld (ix+cons_cdr2),l
+		ld hl,0
+		ld (ix+cons_cdrpage),l
+		ld (ix+cons_carpage),l
+
+		; set flags to T_ATOM and MARK
+		xor a
+		ld (ix+cons_flags1),a
+		ld a,T_ATOM
+		or MARK
+		ld (ix+cons_flags1),a
+
+	; allocate the global_env entry on in the cons pool,
+	;  load up args to cons
+	ld hl,NIL
+	ld de,0
+	push hl
+	push de
+	push hl
+	push de
+	cons
 	
-	; mk_symbol("else")
-	; dump said symbol onto the global_env with value _T
+	pop hl ; page (discard)
+	pop hl ; address
+	ld (global_env),hl
+	;;;page section of global_env?  
+
+	;;; mk_symbol("else")
+	;;; dump said symbol onto the global_env with value _T
 
 	; start the oblist with nil
-	ld (oblist), hl
+	ld (oblist), NIL
+	;;;page section of oblist?  
 
 	ret
 
@@ -426,20 +456,85 @@ init_procs:
 mk_syntax:
 	;;;NOTE: loading operation into cdr, because I don't see any reason not to
 
-	; TODO make scheme string, load into hl
+		; put oblist onto stack
+		ld bc,(oblist)
+		push bc
+		ld bc,(oblist+2)
+		push bc
+
+			;;; TODO make scheme string, push address onto stack (SP)
+
+			;load NIL into stack (SP)
+			ld hl,NIL
+			ld bc,0
+			push hl
+			push bc
+
+		cons
+
+		; set type of new cell to T_SYNTAX and T_SYMBOL
+		ld a,T_SYNTAX
+		or T_SYMBOL
+		ld h,a
+		xor a
+		ld l,a
+		flags_set
+
+	; oblist = cons(x, oblist)
+	cons
+
+	; use result as the new oblist
+	pop hl
+	ld (oblist+2),hl
+	pop hl
+	ld (oblist),hl
+
+	ret
+
+; input
+;	ahl - string value
+;	de - operation
+; output
+;
+; destroys
+;	a
+;	de
+;	hl
+mk_proc:
+	;pointer	x, y;
+
+	;;;x = mk_symbol(x);
+	;;; put result into hl
+
+	push hl
+
+		;y = new_cell(NIL, NIL);
+		push de
+			ld hl,NIL
+			ld de,NIL
+			call cons
+		pop de
+
+		;type(y) = (T_PROC | T_ATOM);
+		ld type1(hl),T_PROC
+		ld type2(hl),T_ATOM
+
+		;ivalue(y) = (long) op;
+		ld ivalue(hl),de
+
+		ex de,hl
+	pop hl
+
+
+	;car(global_env) = cons(cons(x, y), car(global_env));
+	call cons
+
+	ld de,(global_env)
+	ld de,car(de)
 
 	call cons
 
-	; set type of new cell to T_SYNTAX and T_SYMBOL
-	ld a,T_SYNTAX
-	or T_SYMBOL
-	ld type0(hl),a
-
-	; oblist = cons(x, oblist)
-	push hl
-		ld de,oblist
-		call cons ; (cons hl de) ; (cons new-syntax oblist)
-		ld (oblist),hl
-	pop hl
+	ld de,(global_env)
+	ld car(de),hl
 
 	ret
